@@ -1,13 +1,14 @@
 import os
 import tempfile
+from config import OPENAI_API_KEY
+import openai
 import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.document_loaders import Docx2txtLoader
 from langchain.text_splitter import CharacterTextSplitter
 
 # API KEYS
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # Access the API key from environment variable in config.env
-
+OPENAI_API_KEY = OPENAI_API_KEY  # Access the API key from environment variable in config.py
 
 st.title('Welcome to Bahamas AI')
 st.subheader('Your new AI assistant')
@@ -71,6 +72,7 @@ if uploaded_files:
             "Video meeting transcription number " + str(idx) + " :" + docx_file_names[idx] + ": " + page_content)
         st.write(text_gpt)
 
+
 # Handle multiple text inputs
 
 
@@ -92,17 +94,86 @@ def manage_text_fields():
         st.session_state.dropdown_values.append("---")  # Default value
 
     # Display all the text fields and dropdowns in the session state lists
-    for i, (text_field, dropdown_value) in enumerate(zip(st.session_state.text_fields, st.session_state.dropdown_values)):
+    for i, (text_field, dropdown_value) in enumerate(
+            zip(st.session_state.text_fields, st.session_state.dropdown_values)):
         st.write(f"Text Field {i + 1}:")
         text_input_key = f"text_input_{i}"
         dropdown_key = f"dropdown_{i}"
         st.text_area("Add your text below :point_down:", text_field, key=text_input_key)
-        st.selectbox("Please indicate input type :warning: ", options=["PDF Summary", "Email", "Additional Information"], index=0,
+        st.selectbox("Please indicate input type :warning: ",
+                     options=["PDF Summary", "Email", "Additional Information"], index=0,
                      key=dropdown_key)
 
         # Update the dropdown value in the session state when changed by the user
         st.session_state.dropdown_values[i] = st.session_state[dropdown_key]
     st.expander("Show all text fields", expanded=True)
 
+
 # Call the function to manage the text fields and dropdowns
 manage_text_fields()
+
+## FIRST STEP
+
+# Integrate with ChatGPT API
+
+system_content = "You are a professional assistant for a digital development company called 'The Amazingfull " \
+                 "Circus', with one job: summarize the following input and " \
+                 "highlight the " \
+                 "most important points under bullet points but still make full sentences, as if you were " \
+                 "using the input to build a project proposal contract. You will get " \
+                 "text inputs. If information is repeated in multiple " \
+                 "text inputs, try not repeat it to much, or rephrase it. Each " \
+                 "text input is going to indicate beforehand what kind of input it is: a PDF summary, " \
+                 "a general conversation, a video meeting transcription or an email. Take that into account " \
+                 "when " \
+                 "analysing the text inputs. If you get different spellings, always choose the spelling that " \
+                 "is provided in an email, a pdf summary or a general text before the ones coming from a " \
+                 "a video meeting transcription. \n\nYour response should be organized " \
+                 "" \
+                 "as follows: \n\n\1. Project " \
+                 "description\n\n 2. Goal\n\n3. Objectives \n\n You can add some " \
+                 "analysis regarding missing information " \
+                 "in each section. Watch out for proper nouns and acronyms. Document names should be " \
+                 "a good source for company names. Don't trust video meeting transcriptions for proper nouns " \
+                 "orthography \n\n"
+# Open AI LLMS
+from langchain import LLMChain
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
+
+chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                  temperature=0.9)
+
+template = "You are a professional assistant for a digital development company called 'The Amazingfull " \
+                 "Circus', with one job: summarize the following input and " \
+                 "highlight the " \
+                 "most important points under bullet points but still make full sentences, as if you were " \
+                 "using the input to build a project proposal contract: {input}. If information is repeated in " \
+                 " try not repeat it to much, or rephrase it. Each " \
+                 "text input indicates beforehand what kind of input it is: a PDF summary, " \
+                 "a general conversation, a video meeting transcription or an email. Take that into account " \
+                 "when " \
+                 "analysing the text inputs. If you get different spellings, always choose the spelling that " \
+                 "is provided in an email, a pdf summary or a general text before the ones coming from a " \
+                 "a video meeting transcription. \n\nYour response should be organized " \
+                 "" \
+                 "as follows: {output} \n\n You can add some " \
+                 "analysis regarding missing information " \
+                 "in each section. Watch out for proper nouns and acronyms. Document names should be " \
+                 "a good source for company names. Don't trust video meeting transcriptions for proper nouns " \
+                 "orthography \n\n"
+
+system_message_prompt = SystemMessagePromptTemplate.from_template(template)
+human_template = "\n\n".join(text_gpt)
+human_message_prompt = HumanMessagePromptTemplate.from_template(human_template)
+chat_prompt = ChatPromptTemplate.from_messages([system_message_prompt, human_message_prompt])
+
+chain = LLMChain(llm=chat, prompt=chat_prompt)
+
+
+if st.button("Run", key="run"):
+    st.write(chain.run(input=system_content, output="\n\n\1. Project description\n\n 2. Goal\n\n3. Objectives"))
