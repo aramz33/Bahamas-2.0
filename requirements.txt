@@ -6,3 +6,4 @@ openai
 PyPDF2
 faiss-cpu
 tiktoken
+docx2txt
