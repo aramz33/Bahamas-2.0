@@ -5,8 +5,6 @@ from PyPDF2 import PdfReader
 from langchain.document_loaders import Docx2txtLoader
 from langchain.text_splitter import CharacterTextSplitter
 
-from config import OPENAI_API_KEY
-
 st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wide", initial_sidebar_state="auto")
 
 # API KEYS
