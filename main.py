@@ -8,7 +8,7 @@ from langchain.text_splitter import CharacterTextSplitter
 st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wide", initial_sidebar_state="auto")
 
 # API KEYS
-OPENAI_API_KEY = st.secrets("OPENAI_API_KEY")
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 if "button_1" not in st.session_state:
     st.session_state.button_1 = False
