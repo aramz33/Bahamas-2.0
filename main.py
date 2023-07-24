@@ -5,7 +5,7 @@ from PyPDF2 import PdfReader
 from langchain.document_loaders import Docx2txtLoader
 from langchain.text_splitter import CharacterTextSplitter
 
-st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="centered",
+st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wide",
                    initial_sidebar_state="collapsed")
 
 # API KEYS
