@@ -5,20 +5,21 @@ from PyPDF2 import PdfReader
 from langchain.document_loaders import Docx2txtLoader
 from langchain.text_splitter import CharacterTextSplitter
 
-st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="centered",
+                   initial_sidebar_state="collapsed")
 
 # API KEYS
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
-if "button_1" not in st.session_state:
-    st.session_state.button_1 = False
+if "submit_button" not in st.session_state:
+    st.session_state.submit_button = False
 
 
 def toggle1():
-    if st.session_state.button_1:
-        st.session_state.button_1 = False
+    if st.session_state.submit_button:
+        st.session_state.submit_button = False
     else:
-        st.session_state.button_1 = True
+        st.session_state.submit_button = True
 
 
 if "button_2" not in st.session_state:
@@ -67,13 +68,11 @@ with st.sidebar:
         'higher temperatures are more surprising. 0.7 is the default on ChatGPT.')
 
 # variable to input to ChatGPT API eventually
-text_gpt = []
+if "text_gpt" not in st.session_state:
+    st.session_state.text_gpt = []
 
-with st.expander("Inputs", expanded=not st.session_state.button_1):
-    # Handle uploaded files
-    uploaded_files = st.file_uploader("Upload a video meeting transcription", type=("docx", "pdf"),
-                                      accept_multiple_files=True)
-
+# Handle uploaded files
+def handle_uploaded_files(uploaded_files):
     if uploaded_files:
         # Create a temporary directory to store the uploaded files
         temp_dir = tempfile.TemporaryDirectory()
@@ -81,7 +80,6 @@ with st.expander("Inputs", expanded=not st.session_state.button_1):
         # Save each uploaded file to the temporary directory
         docx_file_paths = []
         docx_file_names = []
-        pdf_file_paths = []
         for uploaded_file in uploaded_files:
             if uploaded_file.name.endswith(".docx"):
                 file_path = os.path.join(temp_dir.name, uploaded_file.name)
@@ -92,7 +90,7 @@ with st.expander("Inputs", expanded=not st.session_state.button_1):
             elif uploaded_file.name.endswith(".pdf"):
                 pdf_reader = PdfReader(uploaded_file)
                 raw_text = ''
-                for i, page in enumerate(pdf_reader.pages):
+                for j, page in enumerate(pdf_reader.pages):
                     content = page.extract_text()
                     if content:
                         raw_text += content
@@ -107,8 +105,8 @@ with st.expander("Inputs", expanded=not st.session_state.button_1):
                 )
                 texts = text_splitter.split_text(raw_text)
                 text_final = '\n'.join(texts)
-                text_gpt.append(
-                    "PDF input number " + str(i) + " :" + uploaded_file.name + ": " + text_final)
+                st.session_state.text_gpt.append(
+                    "PDF input number " + str(j) + " :" + uploaded_file.name + ": " + text_final)
 
         # Now you can access the file paths and use Docx2txtLoader to retrieve the text
         for idx, file_path in enumerate(docx_file_paths):
@@ -121,86 +119,116 @@ with st.expander("Inputs", expanded=not st.session_state.button_1):
             page_content = text[start_index:end_index].strip()
 
             # Storing the page content
-            text_gpt.append(
+            st.session_state.text_gpt.append(
                 "Video meeting transcription number " + str(idx) + " :" + docx_file_names[idx] + ": " + page_content)
-            st.write(text_gpt)
-
-    st.session_state
+            st.write(st.session_state.text_gpt)
 
 
-    # Handle multiple text inputs
-
-    # Create a function to manage the text fields using Streamlit Session State
-    def manage_text_fields():
-        col1, col2 = st.columns([0.7, 0.3])
-
-        # Initialize the session state variable if it doesn't exist
-        if "text_fields" not in st.session_state:
-            st.session_state.text_fields = []
-
-        # Initialize the session state variable for dropdown values if it doesn't exist
-        if "dropdown_values" not in st.session_state:
-            st.session_state.dropdown_values = []
-
-        # Create the "Add Text Field" button
-        if st.button("Add Text Field"):
-            st.session_state.text_fields.append("")
-            st.session_state.dropdown_values.append("")  # Default value
-
-        # Display all the text fields and dropdowns in the session state lists
-        for idx, (text_field, dropdown_value) in enumerate(
-                zip(st.session_state.text_fields, st.session_state.dropdown_values)):
-            with st.container():
-                col1.subheader(f"Text Field {idx + 1}:")
-                text_input_key = f"text_input_{idx}"
-                dropdown_key = f"dropdown_{idx}"
-                st.text_area("Add your text below :point_down:", text_field, key=text_input_key)
-                st.selectbox("Please indicate input type :warning: ",
-                               options=["PDF Summary", "Email", "Additional Information"],
-                               key=dropdown_key)
-
-                # Update the dropdown value in the session state when changed by the user
-                st.session_state.dropdown_values[idx] = st.session_state[dropdown_key]
+# Integrate with ChatGPT API
+# Open AI LLMS
+from langchain import LLMChain
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts.chat import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
 
 
-    # Call the function to manage the text fields and dropdowns
-    manage_text_fields()
 
-    ## FIRST STEP
+if 'chain1_1' not in st.session_state:
+    st.session_state['chain1_1'] = None
+if 'chain1_2' not in st.session_state:
+    st.session_state['chain1_2'] = None
+if 'chain1_3' not in st.session_state:
+    st.session_state['chain1_3'] = None
 
-    # Integrate with ChatGPT API
+if 'chain2_1' not in st.session_state:
+    st.session_state['chain2_1'] = None
+if 'chain2_2' not in st.session_state:
+    st.session_state['chain2_2'] = None
+if 'chain2_3' not in st.session_state:
+    st.session_state['chain2_3'] = None
 
-    # Open AI LLMS
-    from langchain import LLMChain
-    from langchain.chat_models import ChatOpenAI
-    from langchain.prompts.chat import (
-        ChatPromptTemplate,
-        SystemMessagePromptTemplate,
-        HumanMessagePromptTemplate,
-    )
+if 'chain3_1' not in st.session_state:
+    st.session_state['chain3_1'] = None
+if 'chain3_2' not in st.session_state:
+    st.session_state['chain3_2'] = None
+if 'chain3_3' not in st.session_state:
+    st.session_state['chain3_3'] = None
 
+st.session_state.system_content = "You are a professional assistant for a digital development company called 'The " \
+                                  "Amazingfull " \
+                                  "Circus'. You have two jobs: summarize the following input and " \
+                                  "provide the important information for project proposals. Act like you would be " \
+                                  "using the" \
+                                  "following input to build a project proposal contract: {input}. \n\n " \
+                                  "\n\nYour response should be organized in 3 parts" \
+                                  "as follows: {output} \n\n. Act professional. If information is repeated " \
+                                  "don't repeat it too much, or rephrase it. Each " \
+                                  "text input indicates beforehand what kind of input it is: a PDF summary, " \
+                                  "a general conversation, a video meeting transcription or an email. Take that into " \
+                                  "account when " \
+                                  "analysing the text inputs.  Watch out for proper nouns and acronyms. Document names " \
+                                  "should be " \
+                                  "a good source for company names. Be direct and concise. USE PROFESIONAL LANGUAGE. " \
+                                    "WRITE EVERYTHING IN BULLET POINTS. \n\n" \
+
+chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                  temperature=st.session_state.temperature)
+
+
+def generate_final():
     chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
                       temperature=st.session_state.temperature)
 
-    st.session_state.system_content = "You are a professional assistant for a digital development company called 'The " \
-                                      "Amazingfull " \
-                                      "Circus', with one job: summarize the following input and " \
-                                      "provide the important information for project proposals. Act like you would be " \
-                                      "using the" \
-                                      "following input to build a project proposal contract: {input}. \n\n " \
-                                      "If information is repeated " \
-                                      " try not repeat it to much, or rephrase it. Each " \
-                                      "text input indicates beforehand what kind of input it is: a PDF summary, " \
-                                      "a general conversation, a video meeting transcription or an email. Take that into account when " \
-                                      "analysing the text inputs. \n\nYour response should be organized " \
-                                      "as follows: {output} \n\n Watch out for proper nouns and acronyms. Document names should be " \
-                                      "a good source for company names. Be direct and concise. Don't trust video meeting transcriptions for proper nouns " \
-                                      "orthography \n\n"
+    st.session_state.final_system_content = "Put the following information together into a project proposal contract: {input}. \n\n "
+    final_system_message_prompt = SystemMessagePromptTemplate.from_template(
+        st.session_state.final_system_content
+    )
+    final_user_template = "\n\n".join(
+        [st.session_state.step_1_choice, st.session_state.step_2_choice, st.session_state.step_4_choice])
+    final_input_prompt = HumanMessagePromptTemplate.from_template(
+        final_user_template
+    )
 
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [final_system_message_prompt, final_input_prompt]
+    )
+
+    st.session_state.parent_chain = LLMChain(llm=chat, prompt=chat_prompt, output_key="Final result")
+
+    st.write(st.session_state.parent_chain.run(input=final_input_prompt))
+
+
+def generate_summary():
+    chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                      temperature=st.session_state.temperature)
+
+    st.session_state.final_system_content = "Summarize the following information in less than 100 words: {input}.  \n\n "
+    final_system_message_prompt = SystemMessagePromptTemplate.from_template(
+        st.session_state.final_system_content
+    )
+    final_user_template = "\n\n".join(
+        [st.session_state.step_1_choice, st.session_state.step_2_choice, st.session_state.step_4_choice])
+    final_input_prompt = HumanMessagePromptTemplate.from_template(
+        final_user_template
+    )
+
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [final_system_message_prompt, final_input_prompt]
+    )
+
+    st.session_state.parent_chain = LLMChain(llm=chat, prompt=chat_prompt, output_key="Summary")
+
+    st.write(st.session_state.parent_chain.run(input=final_input_prompt))
+
+
+def run_generation_1():
     system_message_prompt = SystemMessagePromptTemplate.from_template(
         st.session_state.system_content
     )
-    first_user_template = "\n\n".join(text_gpt)
+    first_user_template = "\n\n".join(st.session_state.text_gpt)
     first_input_prompt = HumanMessagePromptTemplate.from_template(
         first_user_template
     )
@@ -209,79 +237,119 @@ with st.expander("Inputs", expanded=not st.session_state.button_1):
         [system_message_prompt, first_input_prompt]
     )
 
-    st.session_state.chain1 = LLMChain(llm=chat, prompt=chat_prompt, verbose=True, output_key="Step 1 result")
-    st.session_state.chain2 = LLMChain(llm=chat, prompt=chat_prompt, verbose=True, output_key="Step 2 result")
-    st.session_state.chain3 = LLMChain(llm=chat, prompt=chat_prompt, verbose=True, output_key="Step 3 result")
+    st.session_state.chain1 = LLMChain(llm=chat, prompt=chat_prompt, output_key="Step 1 result")
 
-    if 'chain1_1' not in st.session_state:
-        st.session_state['chain1_1'] = None
-    if 'chain1_2' not in st.session_state:
-        st.session_state['chain1_2'] = None
-    if 'chain1_3' not in st.session_state:
-        st.session_state['chain1_3'] = None
+    with st.spinner('Running 1st Step...'):
+        st.session_state['chain1_1'] = st.session_state.chain1.run(input=first_input_prompt,
+                                                                   output="\n\n - Project description \n\n - Objectives \n\n - Scope")
+        st.session_state['chain1_2'] = st.session_state.chain1.run(input=first_input_prompt,
+                                                                   output="\n\n - Project description \n\n - Objectives \n\n - Scope")
+        st.session_state['chain1_3'] = st.session_state.chain1.run(input=first_input_prompt,
+                                                                   output="\n\n - Project description \n\n - Objectives \n\n - Scope")
 
-    if 'chain2_1' not in st.session_state:
-        st.session_state['chain2_1'] = None
-    if 'chain2_2' not in st.session_state:
-        st.session_state['chain2_2'] = None
-    if 'chain2_3' not in st.session_state:
-        st.session_state['chain2_3'] = None
 
-    if 'chain3_1' not in st.session_state:
-        st.session_state['chain3_1'] = None
-    if 'chain3_2' not in st.session_state:
-        st.session_state['chain3_2'] = None
-    if 'chain3_3' not in st.session_state:
-        st.session_state['chain3_3'] = None
+def run_generation_2():
+    system_message_prompt = SystemMessagePromptTemplate.from_template(
+        st.session_state.system_content
+    )
+    first_user_template = "\n\n".join(st.session_state.text_gpt)
+    first_input_prompt = HumanMessagePromptTemplate.from_template(
+        first_user_template
+    )
+
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [system_message_prompt, first_input_prompt]
+    )
+    st.session_state.chain2 = LLMChain(llm=chat, prompt=chat_prompt, output_key="Step 2 result")
+
+    with st.spinner('Running 2nd Step...'):
+        st.session_state['chain2_1'] = st.session_state.chain2.run(input=first_input_prompt,
+                                                                   output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
+        st.session_state['chain2_2'] = st.session_state.chain2.run(input=first_input_prompt,
+                                                                   output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
+        st.session_state['chain2_3'] = st.session_state.chain2.run(input=first_input_prompt,
+                                                                   output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
+
+
+def run_generation_3():
+    system_message_prompt = SystemMessagePromptTemplate.from_template(
+        st.session_state.system_content
+    )
+    first_user_template = "\n\n".join(st.session_state.text_gpt)
+    first_input_prompt = HumanMessagePromptTemplate.from_template(
+        first_user_template
+    )
+
+    chat_prompt = ChatPromptTemplate.from_messages(
+        [system_message_prompt, first_input_prompt]
+    )
+
+    st.session_state.chain3 = LLMChain(llm=chat, prompt=chat_prompt, output_key="Step 3 result")
+
+    with st.spinner('Generating Step 3...'):
+        st.session_state['chain3_1'] = st.session_state.chain3.run(input=first_input_prompt,
+                                                                   output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
+        st.session_state['chain3_2'] = st.session_state.chain3.run(input=first_input_prompt,
+                                                                   output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
+        st.session_state['chain3_3'] = st.session_state.chain3.run(input=first_input_prompt,
+                                                                   output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
+
+
+## INPUTS
+with st.form("Inputs"):
+    uploaded_files = st.file_uploader("Upload a video meeting transcription", type=("docx", "pdf"),
+                                      accept_multiple_files=True)
+
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
+        ["Text 1", "Text 2", "Text 3", "Text 4", "Text 5", "Text 6", "Text 7", "Text 8", "Text 9"])
+    # Initialize the session state variable if it doesn't exist
+    if "text_fields" not in st.session_state:
+        st.session_state.text_fields = []
+
+        # Initialize the session state variable for dropdown values if it doesn't exist
+    if "dropdown_values" not in st.session_state:
+        st.session_state.dropdown_values = []
+
+    # Display all the text fields and dropdowns in the session state lists
+    idx = 0
+    for tab in tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9:
+        with tab:
+            idx += 1
+            st.subheader(f"Text input {idx}:")
+            text_input_key = f"text_input_{idx}"
+            dropdown_key = f"dropdown_{idx}"
+            st.text_area("Add your text below :point_down:", key=text_input_key)
+            st.selectbox("Please indicate input type :warning: ",
+                         options=["", "PDF Summary", "Email", "Additional Information"],
+                         key=dropdown_key)
+
+    for idx in range(1, 10):
+        st.session_state.dropdown_values.append(st.session_state[f"dropdown_{idx}"])
+        st.session_state.text_fields.append(st.session_state[f"text_input_{idx}"])
+        if st.session_state[f"dropdown_{idx}"] != "" and st.session_state[f"text_input_{idx}"] is not None:
+            st.session_state.text_gpt.append(
+                st.session_state[f"dropdown_{idx}"] + ": " + st.session_state[f"text_input_{idx}"])
 
     st.caption('Please click on the button below once you have uploaded all your files and added your text inputs')
 
+    st.session_state.submit = st.form_submit_button('Run')
 
-    def run_generation_1():
-        with st.spinner('Generating Step 1...'):
-            st.session_state['chain1_1'] = st.session_state.chain1.run(input=first_input_prompt,
-                                                                       output="\n\n 1. Project description \n\n 2. Objectives \n\n 3. Scope")
-            st.session_state['chain1_2'] = st.session_state.chain1.run(input=first_input_prompt,
-                                                                       output="\n\n 1. Project description \n\n 2. Objectives \n\n 3. Scope")
-            st.session_state['chain1_3'] = st.session_state.chain1.run(input=first_input_prompt,
-                                                                       output="\n\n 1. Project description \n\n 2. Objectives \n\n 3. Scope")
-
-
-    def run_generation_2():
-        with st.spinner('Generating Step 2...'):
-            st.session_state['chain2_1'] = st.session_state.chain2.run(input=first_input_prompt,
-                                                                       output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
-            st.session_state['chain2_2'] = st.session_state.chain2.run(input=first_input_prompt,
-                                                                       output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
-            st.session_state['chain2_3'] = st.session_state.chain2.run(input=first_input_prompt,
-                                                                       output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
-
-
-    def run_generation_3():
-        with st.spinner('Generating Step 3...'):
-            st.session_state['chain3_1'] = st.session_state.chain3.run(input=first_input_prompt,
-                                                                       output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
-            st.session_state['chain3_2'] = st.session_state.chain3.run(input=first_input_prompt,
-                                                                       output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
-            st.session_state['chain3_3'] = st.session_state.chain3.run(input=first_input_prompt,
-                                                                       output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
-
-
-    if st.button(label='Run Generation', use_container_width=True):
-        with st.empty():
+if st.session_state.submit:
+    with st.empty():
+        with st.spinner('Running...'):
+            handle_uploaded_files(uploaded_files)
             run_generation_1()
-        st.write("Done! :sunglasses: Please click on the 'Next' button to continue")
-
-# Next Button
-
-st.button(label='Next', on_click=toggle1, disabled=st.session_state.button_1, type='primary', key="button1")
+            st.experimental_rerun()
+    st.write("Done! :sunglasses: Proceed to next step")
 
 # Divider
+
 st.divider()
 
-###### Second step
+###### FIRST STEP
 
-with st.expander("Project description - Objectives - Scope", expanded=st.session_state.button_1):
+with st.form("Project description - Objectives - Scope"):
+    st.subheader("STEP 1 : Project description - Objectives - Scope")
     tab1, tab2, tab3 = st.tabs(["Text 1", "Text 2", "Text 3"])
 
     if st.session_state['chain1_1'] and st.session_state['chain1_2'] and st.session_state['chain1_3'] is not None:
@@ -292,40 +360,48 @@ with st.expander("Project description - Objectives - Scope", expanded=st.session
         with tab3:
             st.write(st.session_state['chain1_3'])
 
-    if "step_2_choice" not in st.session_state:
-        st.session_state.step_2_choice = None
+    if "step_1_choice" not in st.session_state:
+        st.session_state.step_1_choice = None
 
-    st.session_state.step_2_choice = st.selectbox("Please choose your favorite generated text",
-                                                  options=["Text 1", "Text 2", "Text 3"], key="step2_choice")
+    st.session_state.step_1_choice = st.selectbox("Please choose your favorite text",
+                                                  options=["Text 1", "Text 2", "Text 3"], key="step1_choice")
 
-    with st.empty():
-        run_generation_2()
-
-    st.write("You have chosen: " + st.session_state.step_2_choice)
+    st.write("You have chosen: " + st.session_state.step_1_choice)
 
     # store the text choice in a variable
-    if st.session_state.step_2_choice == "Text 1":
-        st.session_state.step_2_choice = st.session_state['chain1_1']
+    if st.session_state.step_1_choice == "Text 1":
+        st.session_state.step_1_choice = st.session_state['chain1_1']
         st.session_state['chain1_2'] = None
         st.session_state['chain1_3'] = None
-    elif st.session_state.step_2_choice == "Text 2":
-        st.session_state.step_2_choice = st.session_state['chain1_2']
+    elif st.session_state.step_1_choice == "Text 2":
+        st.session_state.step_1_choice = st.session_state['chain1_2']
         st.session_state['chain1_1'] = None
         st.session_state['chain1_3'] = None
-    elif st.session_state.step_2_choice == "Text 3":
-        st.session_state.step_2_choice = st.session_state['chain1_3']
+    elif st.session_state.step_1_choice == "Text 3":
+        st.session_state.step_1_choice = st.session_state['chain1_3']
         st.session_state['chain1_1'] = None
         st.session_state['chain1_2'] = None
+
+    st.session_state.submit_step1 = st.form_submit_button('Confirm choice')
+
+if st.session_state.submit_step1:
+    with st.empty():
+        with st.spinner('Running...'):
+            run_generation_2()
+    st.write("Done! :sunglasses: Proceed to next step")
 
     # comment = st.text_input("Please add your comments here", max_chars=1000)
     # st.caption("Please click on the button below to return a better text")
     # rerun = st.button(label='Rerun')
 
-st.button(label='Next', on_click=toggle2, disabled=st.session_state.button_2, type='primary', key="button2")
 
 st.divider()
 
-with st.expander("Deliverables - Timeline - Budget", expanded=st.session_state.button_2):
+
+###### SECOND STEP
+
+with st.form("Deliverables - Timeline - Budget"):
+    st.subheader("STEP 2: Deliverables - Timeline - Budget")
     tab1, tab2, tab3 = st.tabs(["Text 1", "Text 2", "Text 3"])
 
     if st.session_state['chain2_1'] and st.session_state['chain2_2'] and st.session_state['chain2_3'] is not None:
@@ -336,36 +412,41 @@ with st.expander("Deliverables - Timeline - Budget", expanded=st.session_state.b
         with tab3:
             st.write(st.session_state['chain2_3'])
 
-    if "step_3_choice" not in st.session_state:
-        st.session_state.step_3_choice = None
+    if "step_2_choice" not in st.session_state:
+        st.session_state.step_2_choice = None
 
-    with st.empty():
-        run_generation_3()
+    st.session_state.step_2_choice = st.selectbox("Please choose your favorite generated text",
+                                                  options=["Text 1", "Text 2", "Text 3"], key="step2_choice")
 
-    st.session_state.step_3_choice = st.selectbox("Please choose your favorite generated text",
-                                                  options=["Text 1", "Text 2", "Text 3"], key="step3_choice")
-
-    st.write("You have chosen: " + st.session_state.step_3_choice)
+    st.write("You have chosen: " + st.session_state.step_2_choice)
 
     # store the text choice in a variable
-    if st.session_state.step_3_choice == "Text 1":
-        st.session_state.step_3_choice = st.session_state['chain2_1']
+    if st.session_state.step_2_choice == "Text 1":
+        st.session_state.step_2_choice = st.session_state['chain2_1']
         st.session_state['chain2_2'] = None
         st.session_state['chain2_3'] = None
-    elif st.session_state.step_3_choice == "Text 2":
-        st.session_state.step_3_choice = st.session_state['chain2_2']
+    elif st.session_state.step_2_choice == "Text 2":
+        st.session_state.step_2_choice = st.session_state['chain2_2']
         st.session_state['chain2_1'] = None
         st.session_state['chain2_3'] = None
-    elif st.session_state.step_3_choice == "Text 3":
-        st.session_state.step_3_choice = st.session_state['chain2_3']
+    elif st.session_state.step_2_choice == "Text 3":
+        st.session_state.step_2_choice = st.session_state['chain2_3']
         st.session_state['chain2_1'] = None
         st.session_state['chain2_2'] = None
 
-st.button(label='Next', on_click=toggle3, disabled=st.session_state.button_3, type='primary', key="button3")
+    st.session_state.submit_step2 = st.form_submit_button('Confirm choice', disabled=not st.session_state.submit_step1)
+
+    if st.session_state.submit_step2:
+        with st.empty():
+            with st.spinner('Running...'):
+                run_generation_3()
+        st.write("Done! :sunglasses: Proceed to next step")
 
 st.divider()
 
-with st.expander("Goals - Methodology - Risks", expanded=st.session_state.button_3):
+###### THIRD STEP
+with st.form("Goals - Methodology - Risks"):
+    st.subheader("STEP 3: Goals - Methodology - Risks")
     tab1, tab2, tab3 = st.tabs(["Text 1", "Text 2", "Text 3"])
 
     if st.session_state['chain3_1'] and st.session_state['chain3_2'] and st.session_state['chain3_3'] is not None:
@@ -398,29 +479,17 @@ with st.expander("Goals - Methodology - Risks", expanded=st.session_state.button
         st.session_state['chain3_1'] = None
         st.session_state['chain3_2'] = None
 
-st.button(label='Next', on_click=toggle4, disabled=st.session_state.button_4, type='primary', key="button4")
+    st.session_state.submit_step3 = st.form_submit_button('Confirm choice', disabled=not st.session_state.submit_step2)
 
-st.divider()
 
-with st.expander("Final result", expanded=st.session_state.button_4):
-    if st.session_state.step_2_choice and st.session_state.step_3_choice and st.session_state.step_4_choice is not None:
-        chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
-                          temperature=st.session_state.temperature)
+if st.session_state["step_1_choice"] and st.session_state["step_2_choice"] and st.session_state.submit_step3 is not None:
+    with st.spinner('Running final step...'):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Final result")
+            generate_final()
 
-        st.session_state.final_system_content = "Put together the following information into a project proposal contract: {input}. \n\n "
-        final_system_message_prompt = SystemMessagePromptTemplate.from_template(
-            st.session_state.final_system_content
-        )
-        final_user_template = "\n\n".join(
-            [st.session_state.step_2_choice, st.session_state.step_3_choice, st.session_state.step_4_choice])
-        final_input_prompt = HumanMessagePromptTemplate.from_template(
-            final_user_template
-        )
-
-        chat_prompt = ChatPromptTemplate.from_messages(
-            [final_system_message_prompt, final_input_prompt]
-        )
-
-        st.session_state.parent_chain = LLMChain(llm=chat, prompt=chat_prompt, verbose=True, output_key="Final result")
-
-        st.write(st.session_state.parent_chain.run(input=final_input_prompt))
+        with col2:
+            st.subheader("Summary")
+            generate_summary()
+    st.write("Done!")
