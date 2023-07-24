@@ -154,13 +154,13 @@ with st.expander("Inputs", expanded=not st.session_state.button_1):
                 col1.subheader(f"Text Field {idx + 1}:")
                 text_input_key = f"text_input_{idx}"
                 dropdown_key = f"dropdown_{idx}"
-                col1.text_area("Add your text below :point_down:", text_field, key=text_input_key)
-                col2.selectbox("Please indicate input type :warning: ",
+                st.text_area("Add your text below :point_down:", text_field, key=text_input_key)
+                st.selectbox("Please indicate input type :warning: ",
                                options=["PDF Summary", "Email", "Additional Information"],
                                key=dropdown_key)
 
                 # Update the dropdown value in the session state when changed by the user
-                st.session_state.dropdown_values[i] = st.session_state[dropdown_key]
+                st.session_state.dropdown_values[idx] = st.session_state[dropdown_key]
 
 
     # Call the function to manage the text fields and dropdowns
@@ -306,16 +306,16 @@ with st.expander("Project description - Objectives - Scope", expanded=st.session
     # store the text choice in a variable
     if st.session_state.step_2_choice == "Text 1":
         st.session_state.step_2_choice = st.session_state['chain1_1']
-        st.session_state['chain1_2']=None
-        st.session_state['chain1_3']=None
+        st.session_state['chain1_2'] = None
+        st.session_state['chain1_3'] = None
     elif st.session_state.step_2_choice == "Text 2":
         st.session_state.step_2_choice = st.session_state['chain1_2']
-        st.session_state['chain1_1']=None
-        st.session_state['chain1_3']=None
+        st.session_state['chain1_1'] = None
+        st.session_state['chain1_3'] = None
     elif st.session_state.step_2_choice == "Text 3":
         st.session_state.step_2_choice = st.session_state['chain1_3']
-        st.session_state['chain1_1']=None
-        st.session_state['chain1_2']=None
+        st.session_state['chain1_1'] = None
+        st.session_state['chain1_2'] = None
 
     # comment = st.text_input("Please add your comments here", max_chars=1000)
     # st.caption("Please click on the button below to return a better text")
@@ -327,8 +327,6 @@ st.divider()
 
 with st.expander("Deliverables - Timeline - Budget", expanded=st.session_state.button_2):
     tab1, tab2, tab3 = st.tabs(["Text 1", "Text 2", "Text 3"])
-
-
 
     if st.session_state['chain2_1'] and st.session_state['chain2_2'] and st.session_state['chain2_3'] is not None:
         with tab1:
@@ -349,23 +347,21 @@ with st.expander("Deliverables - Timeline - Budget", expanded=st.session_state.b
 
     st.write("You have chosen: " + st.session_state.step_3_choice)
 
-
     # store the text choice in a variable
     if st.session_state.step_3_choice == "Text 1":
         st.session_state.step_3_choice = st.session_state['chain2_1']
-        st.session_state['chain2_2']=None
-        st.session_state['chain2_3']=None
+        st.session_state['chain2_2'] = None
+        st.session_state['chain2_3'] = None
     elif st.session_state.step_3_choice == "Text 2":
         st.session_state.step_3_choice = st.session_state['chain2_2']
-        st.session_state['chain2_1']=None
-        st.session_state['chain2_3']=None
+        st.session_state['chain2_1'] = None
+        st.session_state['chain2_3'] = None
     elif st.session_state.step_3_choice == "Text 3":
         st.session_state.step_3_choice = st.session_state['chain2_3']
-        st.session_state['chain2_1']=None
-        st.session_state['chain2_2']=None
+        st.session_state['chain2_1'] = None
+        st.session_state['chain2_2'] = None
 
 st.button(label='Next', on_click=toggle3, disabled=st.session_state.button_3, type='primary', key="button3")
-
 
 st.divider()
 
@@ -391,16 +387,16 @@ with st.expander("Goals - Methodology - Risks", expanded=st.session_state.button
     # store the text choice in a variable
     if st.session_state.step_4_choice == "Text 1":
         st.session_state.step_4_choice = st.session_state['chain3_1']
-        st.session_state['chain3_2']=None
-        st.session_state['chain3_3']=None
+        st.session_state['chain3_2'] = None
+        st.session_state['chain3_3'] = None
     elif st.session_state.step_4_choice == "Text 2":
         st.session_state.step_4_choice = st.session_state['chain3_2']
-        st.session_state['chain3_1']=None
-        st.session_state['chain3_3']=None
+        st.session_state['chain3_1'] = None
+        st.session_state['chain3_3'] = None
     elif st.session_state.step_4_choice == "Text 3":
         st.session_state.step_4_choice = st.session_state['chain3_3']
-        st.session_state['chain3_1']=None
-        st.session_state['chain3_2']=None
+        st.session_state['chain3_1'] = None
+        st.session_state['chain3_2'] = None
 
 st.button(label='Next', on_click=toggle4, disabled=st.session_state.button_4, type='primary', key="button4")
 
