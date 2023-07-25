@@ -443,18 +443,18 @@ if st.session_state.submit_step3:
         with col1:
             st.subheader("Final result")
             content = generate_final()
-            client_name = "Kloudr"
-            context = {"client_name": client_name, "content": content}
-            templateLoader = jinja2.FileSystemLoader(searchpath="./")
-            templateEnv = jinja2.Environment(loader=templateLoader)
-            TEMPLATE_FILE = "pdf_template.html"
-            template = templateEnv.get_template(TEMPLATE_FILE)
-            outputText = template.render(context)
-            config = pdfkit.configuration(wkhtmltopdf="/usr/local/bin/wkhtmltopdf")
-            output_pdf = 'project_proposal.pdf'
-            pdfkit.from_string(outputText, "project_proposal.pdf")
-            st.download_button(label="Download contract template", data=open("project_proposal.pdf", "rb"),
-                               file_name="project_proposal.pdf", mime="application/pdf")
+            # client_name = "Kloudr"
+            # context = {"client_name": client_name, "content": content}
+            # templateLoader = jinja2.FileSystemLoader(searchpath="./")
+            # templateEnv = jinja2.Environment(loader=templateLoader)
+            # TEMPLATE_FILE = "pdf_template.html"
+            # template = templateEnv.get_template(TEMPLATE_FILE)
+            # outputText = template.render(context)
+            # config = pdfkit.configuration(wkhtmltopdf="/usr/local/bin/wkhtmltopdf")
+            # output_pdf = 'project_proposal.pdf'
+            # pdfkit.from_string(outputText, "project_proposal.pdf")
+            # st.download_button(label="Download contract template", data=open("project_proposal.pdf", "rb"),
+            #                    file_name="project_proposal.pdf", mime="application/pdf")
         with col2:
             st.subheader("Summary")
             generate_summary()
