@@ -4,60 +4,31 @@ import streamlit as st
 from PyPDF2 import PdfReader
 from langchain.document_loaders import Docx2txtLoader
 from langchain.text_splitter import CharacterTextSplitter
+import jinja2
+import pdfkit
 
 st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wide",
                    initial_sidebar_state="collapsed")
-
 # API KEYS
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+from config import OPENAI_API_KEY
 
-if "submit_button" not in st.session_state:
-    st.session_state.submit_button = False
+OPENAI_API_KEY = OPENAI_API_KEY
 
-
-def toggle1():
-    if st.session_state.submit_button:
-        st.session_state.submit_button = False
-    else:
-        st.session_state.submit_button = True
-
+if "final" not in st.session_state:
+    st.session_state.final = False
 
 if "button_2" not in st.session_state:
     st.session_state.button_2 = False
 
-
-def toggle2():
-    if st.session_state.button_2:
-        st.session_state.button_2 = False
-    else:
-        st.session_state.button_2 = True
-
-
 if "button_3" not in st.session_state:
     st.session_state.button_3 = False
-
-
-def toggle3():
-    if st.session_state.button_3:
-        st.session_state.button_3 = False
-    else:
-        st.session_state.button_3 = True
-
 
 if "button_4" not in st.session_state:
     st.session_state.button_4 = False
 
-
-def toggle4():
-    if st.session_state.button_4:
-        st.session_state.button_4 = False
-    else:
-        st.session_state.button_4 = True
-
-
 # Title
-st.title('Welcome to Bahamas AI')
-st.subheader('Your new AI assistant')
+st.title(':palm_tree: Welcome to Bahamas AI :palm_tree:')
+st.subheader('Your tropical AI assistant :robot_face:')
 
 # Sidebar
 with st.sidebar:
@@ -71,7 +42,9 @@ with st.sidebar:
 if "text_gpt" not in st.session_state:
     st.session_state.text_gpt = []
 
+
 # Handle uploaded files
+@st.cache_resource
 def handle_uploaded_files(uploaded_files):
     if uploaded_files:
         # Create a temporary directory to store the uploaded files
@@ -134,8 +107,6 @@ from langchain.prompts.chat import (
     HumanMessagePromptTemplate,
 )
 
-
-
 if 'chain1_1' not in st.session_state:
     st.session_state['chain1_1'] = None
 if 'chain1_2' not in st.session_state:
@@ -161,9 +132,9 @@ st.session_state.system_content = "You are a professional assistant for a digita
                                   "Amazingfull " \
                                   "Circus'. You have two jobs: summarize the following input and " \
                                   "provide the important information for project proposals. Act like you would be " \
-                                  "using the" \
+                                  "using the " \
                                   "following input to build a project proposal contract: {input}. \n\n " \
-                                  "\n\nYour response should be organized in 3 parts" \
+                                  "\n\nYour response should be organized in 3 parts " \
                                   "as follows: {output} \n\n. Act professional. If information is repeated " \
                                   "don't repeat it too much, or rephrase it. Each " \
                                   "text input indicates beforehand what kind of input it is: a PDF summary, " \
@@ -172,17 +143,14 @@ st.session_state.system_content = "You are a professional assistant for a digita
                                   "analysing the text inputs.  Watch out for proper nouns and acronyms. Document names " \
                                   "should be " \
                                   "a good source for company names. Be direct and concise. USE PROFESIONAL LANGUAGE. " \
-                                    "WRITE EVERYTHING IN BULLET POINTS. \n\n" \
-
-chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
-                  temperature=st.session_state.temperature)
+                                  "WRITE EVERYTHING IN BULLET POINTS. \n\n"
 
 
 def generate_final():
     chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
                       temperature=st.session_state.temperature)
 
-    st.session_state.final_system_content = "Put the following information together into a project proposal contract: {input}. \n\n "
+    st.session_state.final_system_content = "Put the following information together into a project proposal contract: {input}. \n\n Your response will be used to write a pdf document on python. \n\n"
     final_system_message_prompt = SystemMessagePromptTemplate.from_template(
         st.session_state.final_system_content
     )
@@ -197,8 +165,11 @@ def generate_final():
     )
 
     st.session_state.parent_chain = LLMChain(llm=chat, prompt=chat_prompt, output_key="Final result")
+    # Get the output from the chat model
+    final_output = st.session_state.parent_chain.run(input=final_input_prompt)
+    st.write(final_output)
 
-    st.write(st.session_state.parent_chain.run(input=final_input_prompt))
+    return final_output
 
 
 def generate_summary():
@@ -225,6 +196,8 @@ def generate_summary():
 
 
 def run_generation_1():
+    chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                      temperature=st.session_state.temperature)
     system_message_prompt = SystemMessagePromptTemplate.from_template(
         st.session_state.system_content
     )
@@ -239,7 +212,7 @@ def run_generation_1():
 
     st.session_state.chain1 = LLMChain(llm=chat, prompt=chat_prompt, output_key="Step 1 result")
 
-    with st.spinner('Running 1st Step...'):
+    with st.spinner('Initializing...'):
         st.session_state['chain1_1'] = st.session_state.chain1.run(input=first_input_prompt,
                                                                    output="\n\n - Project description \n\n - Objectives \n\n - Scope")
         st.session_state['chain1_2'] = st.session_state.chain1.run(input=first_input_prompt,
@@ -249,6 +222,8 @@ def run_generation_1():
 
 
 def run_generation_2():
+    chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                      temperature=st.session_state.temperature)
     system_message_prompt = SystemMessagePromptTemplate.from_template(
         st.session_state.system_content
     )
@@ -262,7 +237,7 @@ def run_generation_2():
     )
     st.session_state.chain2 = LLMChain(llm=chat, prompt=chat_prompt, output_key="Step 2 result")
 
-    with st.spinner('Running 2nd Step...'):
+    with st.spinner('Calculating...'):
         st.session_state['chain2_1'] = st.session_state.chain2.run(input=first_input_prompt,
                                                                    output="\n\n - Deliverables \n\n - Timeline \n\n - Budget")
         st.session_state['chain2_2'] = st.session_state.chain2.run(input=first_input_prompt,
@@ -272,6 +247,8 @@ def run_generation_2():
 
 
 def run_generation_3():
+    chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                      temperature=st.session_state.temperature)
     system_message_prompt = SystemMessagePromptTemplate.from_template(
         st.session_state.system_content
     )
@@ -286,7 +263,7 @@ def run_generation_3():
 
     st.session_state.chain3 = LLMChain(llm=chat, prompt=chat_prompt, output_key="Step 3 result")
 
-    with st.spinner('Generating Step 3...'):
+    with st.spinner('Wait for it...'):
         st.session_state['chain3_1'] = st.session_state.chain3.run(input=first_input_prompt,
                                                                    output="\n\n - Goals \n\n - Methodolgy \n\n - Risks")
         st.session_state['chain3_2'] = st.session_state.chain3.run(input=first_input_prompt,
@@ -332,15 +309,15 @@ with st.form("Inputs"):
 
     st.caption('Please click on the button below once you have uploaded all your files and added your text inputs')
 
-    st.session_state.submit = st.form_submit_button('Run')
+    st.session_state.submit_input = st.form_submit_button('Run')
 
-if st.session_state.submit:
-    with st.empty():
-        with st.spinner('Running...'):
-            handle_uploaded_files(uploaded_files)
-            run_generation_1()
-            st.experimental_rerun()
-    st.write("Done! :sunglasses: Proceed to next step")
+    if st.session_state.submit_input:
+        with st.empty():
+            with st.spinner('Running...'):
+                handle_uploaded_files(uploaded_files)
+                run_generation_1()
+                st.experimental_rerun()
+        st.write("Done! :robot_face: Proceed to Step 1")
 
 # Divider
 
@@ -369,37 +346,28 @@ with st.form("Project description - Objectives - Scope"):
     st.write("You have chosen: " + st.session_state.step_1_choice)
 
     # store the text choice in a variable
-    if st.session_state.step_1_choice == "Text 1":
+    if st.session_state.step1_choice == "Text 1":
         st.session_state.step_1_choice = st.session_state['chain1_1']
-        st.session_state['chain1_2'] = None
-        st.session_state['chain1_3'] = None
-    elif st.session_state.step_1_choice == "Text 2":
+    elif st.session_state.step1_choice == "Text 2":
         st.session_state.step_1_choice = st.session_state['chain1_2']
-        st.session_state['chain1_1'] = None
-        st.session_state['chain1_3'] = None
-    elif st.session_state.step_1_choice == "Text 3":
+    elif st.session_state.step1_choice == "Text 3":
         st.session_state.step_1_choice = st.session_state['chain1_3']
-        st.session_state['chain1_1'] = None
-        st.session_state['chain1_2'] = None
 
     st.session_state.submit_step1 = st.form_submit_button('Confirm choice')
 
-if st.session_state.submit_step1:
-    with st.empty():
-        with st.spinner('Running...'):
-            run_generation_2()
-    st.write("Done! :sunglasses: Proceed to next step")
+    if st.session_state.submit_step1:
+        with st.empty():
+            with st.spinner('Running...'):
+                run_generation_2()
+        st.write(":robot_face: Done!  Proceed to step 2 ! :robot_face:")
 
     # comment = st.text_input("Please add your comments here", max_chars=1000)
     # st.caption("Please click on the button below to return a better text")
     # rerun = st.button(label='Rerun')
 
-
 st.divider()
 
-
 ###### SECOND STEP
-
 with st.form("Deliverables - Timeline - Budget"):
     st.subheader("STEP 2: Deliverables - Timeline - Budget")
     tab1, tab2, tab3 = st.tabs(["Text 1", "Text 2", "Text 3"])
@@ -421,18 +389,12 @@ with st.form("Deliverables - Timeline - Budget"):
     st.write("You have chosen: " + st.session_state.step_2_choice)
 
     # store the text choice in a variable
-    if st.session_state.step_2_choice == "Text 1":
+    if st.session_state.step2_choice == "Text 1":
         st.session_state.step_2_choice = st.session_state['chain2_1']
-        st.session_state['chain2_2'] = None
-        st.session_state['chain2_3'] = None
-    elif st.session_state.step_2_choice == "Text 2":
+    elif st.session_state.step2_choice == "Text 2":
         st.session_state.step_2_choice = st.session_state['chain2_2']
-        st.session_state['chain2_1'] = None
-        st.session_state['chain2_3'] = None
-    elif st.session_state.step_2_choice == "Text 3":
+    elif st.session_state.step2_choice == "Text 3":
         st.session_state.step_2_choice = st.session_state['chain2_3']
-        st.session_state['chain2_1'] = None
-        st.session_state['chain2_2'] = None
 
     st.session_state.submit_step2 = st.form_submit_button('Confirm choice', disabled=not st.session_state.submit_step1)
 
@@ -440,7 +402,7 @@ with st.form("Deliverables - Timeline - Budget"):
         with st.empty():
             with st.spinner('Running...'):
                 run_generation_3()
-        st.write("Done! :sunglasses: Proceed to next step")
+        st.write("Done! :sunglasses: Proceed to Step 3 ! :sunglasses:")
 
 st.divider()
 
@@ -466,30 +428,33 @@ with st.form("Goals - Methodology - Risks"):
     st.write("You have chosen: " + st.session_state.step_4_choice)
 
     # store the text choice in a variable
-    if st.session_state.step_4_choice == "Text 1":
+    if st.session_state.step4_choice == "Text 1":
         st.session_state.step_4_choice = st.session_state['chain3_1']
-        st.session_state['chain3_2'] = None
-        st.session_state['chain3_3'] = None
-    elif st.session_state.step_4_choice == "Text 2":
+    elif st.session_state.step4_choice == "Text 2":
         st.session_state.step_4_choice = st.session_state['chain3_2']
-        st.session_state['chain3_1'] = None
-        st.session_state['chain3_3'] = None
-    elif st.session_state.step_4_choice == "Text 3":
+    elif st.session_state.step4_choice == "Text 3":
         st.session_state.step_4_choice = st.session_state['chain3_3']
-        st.session_state['chain3_1'] = None
-        st.session_state['chain3_2'] = None
 
     st.session_state.submit_step3 = st.form_submit_button('Confirm choice', disabled=not st.session_state.submit_step2)
 
-
-if st.session_state["step_1_choice"] and st.session_state["step_2_choice"] and st.session_state.submit_step3 is not None:
-    with st.spinner('Running final step...'):
+if st.session_state.submit_step3:
+    with st.spinner('Generating contract...'):
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Final result")
-            generate_final()
-
+            content = generate_final()
+            client_name = "Kloudr"
+            context = {"client_name": client_name, "content": content}
+            templateLoader = jinja2.FileSystemLoader(searchpath="./")
+            templateEnv = jinja2.Environment(loader=templateLoader)
+            TEMPLATE_FILE = "pdf_template.html"
+            template = templateEnv.get_template(TEMPLATE_FILE)
+            outputText = template.render(context)
+            config = pdfkit.configuration(wkhtmltopdf="/usr/local/bin/wkhtmltopdf")
+            output_pdf = 'project_proposal.pdf'
+            pdfkit.from_string(outputText, "project_proposal.pdf")
+            st.download_button(label="Download contract template", data=open("project_proposal.pdf", "rb"),
+                               file_name="project_proposal.pdf", mime="application/pdf")
         with col2:
             st.subheader("Summary")
             generate_summary()
-    st.write("Done!")
