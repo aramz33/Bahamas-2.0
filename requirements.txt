@@ -7,3 +7,5 @@ PyPDF2~=3.0.1
 docx2txt
 Jinja2~=3.1.2
 pdfkit~=1.0.0
+wkhtmltopdf>=0.2
+
