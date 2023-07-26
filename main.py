@@ -11,9 +11,8 @@ st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wi
                    initial_sidebar_state="collapsed")
 # API KEYS
 
-from config import OPENAI_API_KEY
 
-OPENAI_API_KEY = OPENAI_API_KEY
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 if "final" not in st.session_state:
     st.session_state.final = False
