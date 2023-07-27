@@ -10,9 +10,10 @@ import pdfkit
 st.set_page_config(page_title="Bahamas AI", page_icon=":robot_face:", layout="wide",
                    initial_sidebar_state="collapsed")
 # API KEYS
+from config import OPENAI_API_KEY
 
 
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+OPENAI_API_KEY = OPENAI_API_KEY
 
 if "final" not in st.session_state:
     st.session_state.final = False
@@ -31,7 +32,7 @@ if "rerun" not in st.session_state:
 
 # Title
 st.title(':palm_tree: WELCOME TO BAHAMAS AI :palm_tree:')
-st.subheader('Your new tropical AI assistant :robot_face: :tropical_drink:')
+st.header('Your new tropical AI assistant :robot_face: :tropical_drink:')
 
 # Sidebar
 with st.sidebar:
@@ -191,7 +192,7 @@ def generate_final(comment):
 
 def generate_summary(comment):
     chat = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
-                      temperature=st.session_state.temperature)
+                      temperature=0.8)
 
     if comment in st.session_state.comments:
         st.session_state.comments_input = "\n\n".join(st.session_state.comments)
@@ -199,12 +200,15 @@ def generate_summary(comment):
         st.session_state.comments.append(comment)
         st.session_state.comments_input = "\n\n".join(st.session_state.comments)
 
-    final_system_content = "Summarize the following information in a paragraph of less than 100 words : {input}." \
-                            "\n\n Here are some important user comments to keep in mind" + st.session_state.comments_input
+    final_system_content = "Summarize the following information in a paragraph of less than 70 words : {input}. Do not right in bullet points." \
+                            "\n\n Here are some very important user comments to keep in mind :" + st.session_state.comments_input
+
 
     final_system_message_prompt = SystemMessagePromptTemplate.from_template(
         final_system_content
     )
+
+    st.write(final_system_message_prompt)
 
     final_user_template = "\n\n".join(
         [st.session_state.step_1_choice, st.session_state.step_2_choice, st.session_state.step_4_choice])
@@ -300,11 +304,11 @@ def run_generation_3():
 
 ## INPUTS
 with st.form("Inputs"):
-    uploaded_files = st.file_uploader("Upload a video meeting transcription", type=("docx", "pdf"),
+    uploaded_files = st.file_uploader("Upload your files", type=("docx", "pdf"),
                                       accept_multiple_files=True)
 
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(
-        ["Text 1", "Text 2", "Text 3", "Text 4", "Text 5", "Text 6", "Text 7", "Text 8", "Text 9"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17, tab18, tab19, tab20  = st.tabs(
+        ["Text 1", "Text 2", "Text 3", "Text 4", "Text 5", "Text 6", "Text 7", "Text 8", "Text 9", "Text 10", "Text 11", "Text 12", "Text 13", "Text 14", "Text 15", "Text 16", "Text 17", "Text 18", "Text 19", "Text 20"])
     # Initialize the session state variable if it doesn't exist
     if "text_fields" not in st.session_state:
         st.session_state.text_fields = []
@@ -315,28 +319,27 @@ with st.form("Inputs"):
 
     # Display all the text fields and dropdowns in the session state lists
     idx = 0
-    for tab in tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9:
+    for tab in tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11, tab12, tab13, tab14, tab15, tab16, tab17, tab18, tab19, tab20:
         with tab:
             idx += 1
-            st.subheader(f"Text input {idx}:")
+            st.subheader("Text inputs")
             text_input_key = f"text_input_{idx}"
             dropdown_key = f"dropdown_{idx}"
-            st.text_area("Add your text below :point_down:", key=text_input_key)
+            st.text_area("", key=text_input_key, placeholder="Add your text here", label_visibility="collapsed")
             st.selectbox("Please indicate input type :warning: ",
                          options=["", "PDF Summary", "Email", "Additional Information"],
-                         key=dropdown_key)
+                         key=dropdown_key, format_func=lambda x: "Select input type" if x == '' else x, label_visibility="collapsed")
 
-    for idx in range(1, 10):
+    for idx in range(1, 21):
         st.session_state.dropdown_values.append(st.session_state[f"dropdown_{idx}"])
         st.session_state.text_fields.append(st.session_state[f"text_input_{idx}"])
         if st.session_state[f"dropdown_{idx}"] != "" and st.session_state[f"text_input_{idx}"] is not None:
             st.session_state.text_gpt.append(
                 st.session_state[f"dropdown_{idx}"] + ": " + st.session_state[f"text_input_{idx}"])
 
-    st.caption('Please click on the button below once you have uploaded all your files and added your text inputs')
+    st.caption("Please click on 'Run' once you have uploaded all your files and added your text inputs")
 
-    st.session_state.submit_input = st.form_submit_button('Run')
-
+    st.session_state.submit_input = st.form_submit_button('Run', use_container_width=True)
     if st.session_state.submit_input:
         with st.empty():
             with st.spinner('Running...'):
@@ -463,10 +466,9 @@ with st.form("Goals - Methodology - Risks"):
 
     st.session_state.submit_step3 = st.form_submit_button('Generate output', disabled=not st.session_state.submit_step2)
 
-st.session_state.comment = st.text_area("Comments", max_chars=1000)
-st.caption("Don't repeat the same comment twice")
-st.caption("Don't rewrite the same comment after rerunning")
-st.session_state.rerun = st.button(label='Rerun')
+st.session_state.comment = st.text_area("Correct the generated output by inputting your comments below", placeholder="Add your comments here as if you were talking to ChatGPT \nDon't repeat the same comment twice \nDon't rewrite the same comment after rerunning" )
+
+st.session_state.rerun = st.button(label='Rerun', use_container_width=True)
 
 if st.session_state.submit_step3:
     with st.spinner('Generating contract...'):
